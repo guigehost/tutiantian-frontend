@@ -33,6 +33,13 @@ dist/
 .DS_Store
 Thumbs.db
 
+# Documentation
+JOB.md
+PRD.md
+
+# GitHub
+.github/
+
 # Test files
 test_*.docx
 *_output.docx
