@@ -21,6 +21,9 @@ dist/
 *.swp
 *.swo
 
+# Claude Code
+.claude/
+
 # Database
 *.db
 *.sqlite
