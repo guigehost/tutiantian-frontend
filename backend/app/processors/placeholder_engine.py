@@ -452,10 +452,18 @@ class PlaceholderEngine:
                     return True
             return False
         elif position == "start" and doc.paragraphs:
-            # 在第一个段落开头插入
+            # 在第一个段落开头插入 - 使用XML方式插入
+            from docx.oxml import OxmlElement
             first_para = doc.paragraphs[0]
-            run = first_para.insert_run(0)
-            run.text = placeholder
+            # 创建一个新的run元素
+            new_run = OxmlElement('w:r')
+            # 添加文本
+            new_t = OxmlElement('w:t')
+            new_t.text = placeholder
+            new_t.set('{http://www.w3.org/XML/1998/namespace}space', 'preserve')
+            new_run.append(new_t)
+            # 在段落的第一个位置插入
+            first_para._p.insert(0, new_run)
             save_path = output_path if output_path else template_path
             doc.save(save_path)
             return True

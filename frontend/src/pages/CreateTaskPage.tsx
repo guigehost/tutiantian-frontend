@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Typography, Steps, Button, Select, Table, message, Space, Row, Col, Spin, Alert, Divider, Tag } from 'antd';
-import { HomeOutlined } from '@ant-design/icons';
+import { Card, Typography, Steps, Button, Select, Table, message, Space, Row, Col, Spin, Alert, Divider, Tag, Upload, Modal } from 'antd';
+import { HomeOutlined, PlusOutlined, UploadOutlined } from '@ant-design/icons';
 import { projectApi, templateApi, datasourceApi, taskApi } from '../api/client';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 const { Title, Text } = Typography;
 
@@ -15,6 +15,9 @@ interface MarkedTemplate {
 
 export default function CreateTaskPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const templateIdFromUrl = searchParams.get('templateId');
+
   const [currentStep, setCurrentStep] = useState(0);
   const [markedTemplates, setMarkedTemplates] = useState<MarkedTemplate[]>([]);
   const [datasources, setDatasources] = useState<any[]>([]);
@@ -26,10 +29,21 @@ export default function CreateTaskPage() {
   const [taskId, setTaskId] = useState<string | null>(null);
   const [taskStatus, setTaskStatus] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [uploadingDs, setUploadingDs] = useState(false);
+  const [uploadModalVisible, setUploadModalVisible] = useState(false);
 
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    if (markedTemplates.length > 0 && templateIdFromUrl) {
+      const t = markedTemplates.find(t => String(t.id) === String(templateIdFromUrl));
+      if (t) {
+        setSelectedTemplate(t);
+      }
+    }
+  }, [markedTemplates, templateIdFromUrl]);
 
   const loadData = async () => {
     setLoading(true);
@@ -47,7 +61,6 @@ export default function CreateTaskPage() {
     }
   };
 
-  // 选择数据源时获取详情（包括预览数据）
   const handleDatasourceSelect = async (id: number) => {
     setSelectedDatasource(id);
     try {
@@ -59,6 +72,32 @@ export default function CreateTaskPage() {
     }
   };
 
+  const handleUploadDatasource = async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('name', file.name.replace(/\.(xlsx|xls|csv)$/, ''));
+
+    setUploadingDs(true);
+    try {
+      const res = await datasourceApi.upload(formData);
+      message.success('上传成功');
+      setUploadModalVisible(false);
+      // 刷新数据源列表
+      const dRes = await datasourceApi.list();
+      setDatasources(dRes.data);
+      // 自动选中新上传的数据源
+      const newDs = dRes.data.find((d: any) => d.name === file.name.replace(/\.(xlsx|xls|csv)$/, ''));
+      if (newDs) {
+        handleDatasourceSelect(newDs.id);
+      }
+    } catch (e: any) {
+      message.error(e.response?.data?.detail || '上传失败');
+    } finally {
+      setUploadingDs(false);
+    }
+    return false;
+  };
+
   const handleCreateProject = async () => {
     if (!selectedTemplate || !selectedDatasource) {
       message.warning('请选择模板和数据源');
@@ -66,7 +105,6 @@ export default function CreateTaskPage() {
     }
     setGenerating(true);
     try {
-      // 自动生成映射：模板占位符 <-> 数据源列名
       const mappings = selectedTemplate.placeholders.map((p: string) => ({
         placeholder: `{{${p}}}`,
         column: p
@@ -80,7 +118,6 @@ export default function CreateTaskPage() {
       });
       setProjectId(res.data.id);
 
-      // 直接开始生成文档（映射已自动完成）
       const genRes = await taskApi.generate(res.data.id, {
         filename_pattern: 'result_{index}'
       });
@@ -105,7 +142,25 @@ export default function CreateTaskPage() {
       setCurrentStep(2);
       message.success('生成任务已提交');
     } catch (e: any) {
-      message.error(e.response?.data?.detail || '生成失败');
+      const errorData = e.response?.data?.detail;
+      if (errorData?.code === 'INSUFFICIENT_BALANCE') {
+        Modal.confirm({
+          title: '剩余次数不足',
+          content: (
+            <div>
+              <p>当前剩余 <strong>{errorData.current}</strong> 次，本次需要 <strong>{errorData.required}</strong> 次</p>
+              <p>请先充值足够的次数后再试</p>
+            </div>
+          ),
+          okText: '去充值',
+          cancelText: '取消',
+          onOk: () => {
+            window.location.href = '/membership';
+          },
+        });
+      } else {
+        message.error(errorData || '生成失败');
+      }
     } finally {
       setGenerating(false);
     }
@@ -152,12 +207,12 @@ export default function CreateTaskPage() {
   }));
 
   return (
-    <div style={{ padding: 24 }}>
-      <div style={{ marginBottom: 16 }}>
+    <div style={{ padding: 24, background: '#f0f2f5', minHeight: '100vh' }}>
+      <div style={{ marginBottom: 24 }}>
         <Button icon={<HomeOutlined />} onClick={() => navigate('/dashboard')}>返回首页</Button>
       </div>
 
-      <Card>
+      <Card bordered={false} style={{ borderRadius: 12, boxShadow: '0 2px 12px rgba(0,0,0,0.08)' }}>
         <Title level={3}>创建文档生成任务</Title>
 
         <Steps current={currentStep} style={{ marginBottom: 32 }}>
@@ -168,7 +223,7 @@ export default function CreateTaskPage() {
 
         {currentStep === 0 && (
           <div>
-            <Row gutter={16} style={{ marginBottom: 24 }}>
+            <Row gutter={24} style={{ marginBottom: 24 }}>
               <Col span={12}>
                 <div style={{ marginBottom: 8, fontWeight: 500 }}>选择已标记的模板:</div>
                 <Select
@@ -180,6 +235,7 @@ export default function CreateTaskPage() {
                     setSelectedTemplate(t || null);
                   }}
                   loading={loading}
+                  size="large"
                 >
                   {markedTemplates.map((t) => (
                     <Select.Option key={t.id} value={t.id}>{t.name}</Select.Option>
@@ -204,12 +260,24 @@ export default function CreateTaskPage() {
                 )}
               </Col>
               <Col span={12}>
-                <div style={{ marginBottom: 8, fontWeight: 500 }}>选择Excel数据源:</div>
+                <div style={{ marginBottom: 8, fontWeight: 500 }}>
+                  选择Excel数据源:
+                  <Button
+                    type="link"
+                    icon={<PlusOutlined />}
+                    size="small"
+                    onClick={() => setUploadModalVisible(true)}
+                    style={{ marginLeft: 8 }}
+                  >
+                    上传新数据源
+                  </Button>
+                </div>
                 <Select
-                  placeholder="请选择数据源"
+                  placeholder="请选择或上传数据源"
                   style={{ width: '100%' }}
                   value={selectedDatasource}
                   onChange={handleDatasourceSelect}
+                  size="large"
                 >
                   {datasources.map((d: any) => (
                     <Select.Option key={d.id} value={d.id}>{d.name} ({d.row_count}行)</Select.Option>
@@ -218,7 +286,7 @@ export default function CreateTaskPage() {
 
                 {selectedDatasource && !selectedDatasourceDetail && (
                   <div style={{ marginTop: 8 }}>
-                    <Text type="secondary">请选择数据源查看预览</Text>
+                    <Text type="secondary">加载中...</Text>
                   </div>
                 )}
               </Col>
@@ -243,7 +311,6 @@ export default function CreateTaskPage() {
                   description={
                     <Text type="secondary">
                       系统将自动把模板中的 <Tag>{`{{ 字段名 }}`}</Tag> 与数据源中同名的列进行映射。
-                      如果列名不同，请在下一步手动调整映射关系。
                     </Text>
                   }
                   type="info"
@@ -255,12 +322,13 @@ export default function CreateTaskPage() {
 
             <div style={{ textAlign: 'center' }}>
               <Space size="large">
-                <Button onClick={loadData}>刷新</Button>
+                <Button onClick={loadData} size="large">刷新</Button>
                 <Button
                   type="primary"
                   size="large"
                   onClick={handleCreateProject}
                   disabled={!selectedTemplate || !selectedDatasource}
+                  loading={generating}
                 >
                   生成文档
                 </Button>
@@ -299,6 +367,27 @@ export default function CreateTaskPage() {
           </div>
         )}
       </Card>
+
+      {/* 上传数据源弹窗 */}
+      <Modal
+        title="上传Excel数据源"
+        open={uploadModalVisible}
+        onCancel={() => setUploadModalVisible(false)}
+        footer={null}
+      >
+        <div style={{ textAlign: 'center', padding: 24 }}>
+          <Upload.Dragger
+            accept=".xlsx,.xls,.csv"
+            showUploadList={false}
+            beforeUpload={handleUploadDatasource}
+          >
+            <p className="ant-upload-drag-icon"><UploadOutlined /></p>
+            <p className="ant-upload-text">点击或拖拽上传Excel文件</p>
+            <p className="ant-upload-hint">支持 .xlsx, .xls, .csv 格式</p>
+          </Upload.Dragger>
+        </div>
+        {uploadingDs && <div style={{ textAlign: 'center', marginTop: 16 }}>上传中...</div>}
+      </Modal>
     </div>
   );
 }

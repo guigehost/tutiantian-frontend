@@ -76,9 +76,20 @@ export default function TemplatesPage() {
     }
   };
 
+  const handleCreateTask = (template: any) => {
+    // 如果模板已标记，直接跳转创建任务
+    if (template.is_marked === 1) {
+      navigate(`/create?templateId=${template.id}`);
+    } else {
+      // 模板未标记，先去标记
+      message.warning('请先标记模板字段');
+      navigate(`/word-marker?templateId=${template.id}`);
+    }
+  };
+
   const fieldColumns = [
-    { title: '字段名', dataIndex: 'fieldName', key: 'fieldName', width: 120 },
-    { title: '原文', dataIndex: 'originalText', key: 'originalText', ellipsis: true },
+    { title: '字段名', dataIndex: 'field_name', key: 'field_name', width: 120 },
+    { title: '原文', dataIndex: 'original_text', key: 'original_text', ellipsis: true },
     {
       title: '字体',
       key: 'format',
@@ -109,7 +120,17 @@ export default function TemplatesPage() {
   ];
 
   const columns = [
-    { title: '模板名称', dataIndex: 'name', key: 'name' },
+    {
+      title: '模板名称',
+      dataIndex: 'name',
+      key: 'name',
+      render: (text: string, record: any) => (
+        <Space>
+          {text}
+          {record.is_marked === 1 && <Tag color="green">已标记</Tag>}
+        </Space>
+      )
+    },
     { title: '占位符', dataIndex: 'placeholders', key: 'placeholders',
       render: (placeholders: string[]) => (
         <Space>
@@ -124,7 +145,9 @@ export default function TemplatesPage() {
     { title: '创建时间', dataIndex: 'created_at', key: 'created_at',
       render: (text: string) => new Date(text).toLocaleDateString()
     },
-    { title: '操作', key: 'action',
+    {
+      title: '操作',
+      key: 'action',
       render: (_: any, record: any) => (
         <Space>
           <Button
@@ -135,9 +158,9 @@ export default function TemplatesPage() {
             查看字段
           </Button>
           <Button
-            type="link"
+            type="primary"
             icon={<ArrowRightOutlined />}
-            onClick={() => navigate('/create')}
+            onClick={() => handleCreateTask(record)}
           >
             创建任务
           </Button>
@@ -155,12 +178,12 @@ export default function TemplatesPage() {
   ];
 
   return (
-    <div style={{ padding: 24 }}>
-      <div style={{ marginBottom: 16 }}>
+    <div style={{ padding: 24, background: '#f0f2f5', minHeight: '100vh' }}>
+      <div style={{ marginBottom: 24 }}>
         <Button icon={<HomeOutlined />} onClick={() => navigate('/dashboard')}>返回首页</Button>
       </div>
 
-      <Card>
+      <Card bordered={false} style={{ borderRadius: 12, boxShadow: '0 2px 12px rgba(0,0,0,0.08)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
           <Title level={3}>我的模板</Title>
           <Space>
@@ -176,12 +199,6 @@ export default function TemplatesPage() {
               onClick={() => navigate('/word-marker')}
             >
               标记字段
-            </Button>
-            <Button
-              icon={<ArrowRightOutlined />}
-              onClick={() => navigate('/create')}
-            >
-              去创建任务
             </Button>
           </Space>
         </div>

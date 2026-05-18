@@ -433,21 +433,28 @@ export default function WordMarkerPage() {
   ];
 
   return (
-    <div style={{ padding: 24 }}>
-      <div style={{ marginBottom: 16 }}>
+    <div style={{ padding: 24, background: '#f0f2f5', minHeight: '100vh' }}>
+      <div style={{ marginBottom: 24 }}>
         <Button icon={<HomeOutlined />} onClick={() => navigate('/dashboard')}>返回首页</Button>
       </div>
 
-      <Title level={3}>Word模板标记工具</Title>
-      <Text type="secondary">上传Word文档，选中文本或点击表格单元格标记为可填充字段，生成带占位符的模板</Text>
+      <Card
+        bordered={false}
+        style={{ borderRadius: 12, boxShadow: '0 2px 12px rgba(0,0,0,0.08)', marginBottom: 24 }}
+      >
+        <Title level={3} style={{ margin: '0 0 4px 0' }}>Word模板标记工具</Title>
+        <Text type="secondary">上传Word文档，选中文本或点击表格单元格标记为可填充字段，生成带占位符的模板</Text>
+      </Card>
 
-      <Row gutter={24} style={{ marginTop: 24 }}>
+      <Row gutter={24}>
         {/* 左侧：Word预览 */}
         <Col span={14}>
           <Card
+            bordered={false}
+            style={{ borderRadius: 12, boxShadow: '0 2px 12px rgba(0,0,0,0.08)' }}
             title={
               <Space>
-                <FileWordOutlined />
+                <FileWordOutlined style={{ color: '#667eea' }} />
                 <span>Word文档预览</span>
               </Space>
             }
@@ -457,7 +464,13 @@ export default function WordMarkerPage() {
                 showUploadList={false}
                 beforeUpload={handleUpload}
               >
-                <Button icon={<UploadOutlined />} loading={uploading}>上传Word</Button>
+                <Button
+                  icon={<UploadOutlined />}
+                  loading={uploading}
+                  style={{ borderRadius: 8 }}
+                >
+                  上传Word
+                </Button>
               </Upload>
             }
           >
@@ -469,18 +482,19 @@ export default function WordMarkerPage() {
                   minHeight: 400,
                   maxHeight: 600,
                   overflow: 'auto',
-                  border: '1px solid #f0f0f0',
+                  border: '1px solid #e8e8e8',
                   padding: 16,
-                  background: '#fff'
+                  background: '#fff',
+                  borderRadius: 8
                 }}
                 onMouseUp={handleTextSelection}
                 onClick={handleCellClick}
               >
                 {!file ? (
-                  <div style={{ textAlign: 'center', padding: 40 }}>
-                    <UploadOutlined style={{ fontSize: 48, color: '#ccc' }} />
+                  <div style={{ textAlign: 'center', padding: 60 }}>
+                    <UploadOutlined style={{ fontSize: 64, color: '#d9d9d9' }} />
                     <div style={{ marginTop: 16 }}>
-                      <Text type="secondary">请上传Word文档开始标记</Text>
+                      <Text type="secondary" style={{ fontSize: 16 }}>请上传Word文档开始标记</Text>
                     </div>
                   </div>
                 ) : (
@@ -498,7 +512,11 @@ export default function WordMarkerPage() {
         {/* 右侧：字段标记 */}
         <Col span={10}>
           {/* 选中内容 */}
-          <Card size="small" style={{ marginBottom: 16 }}>
+          <Card
+            size="small"
+            bordered={false}
+            style={{ marginBottom: 16, borderRadius: 12, boxShadow: '0 2px 12px rgba(0,0,0,0.08)' }}
+          >
             <Space style={{ marginBottom: 12 }}>
               <Radio.Group
                 value={markMode}
@@ -577,9 +595,9 @@ export default function WordMarkerPage() {
             </Space.Compact>
 
             {/* 格式配置 */}
-            <div style={{ marginTop: 16, padding: 12, background: '#f5f5f5', borderRadius: 4 }}>
-              <Space style={{ marginBottom: 8 }}>
-                <FormatPainterOutlined />
+            <div style={{ marginTop: 16, padding: 16, background: '#f0f5ff', borderRadius: 8 }}>
+              <Space style={{ marginBottom: 12 }}>
+                <FormatPainterOutlined style={{ color: '#667eea' }} />
                 <Text strong>字段格式设置</Text>
               </Space>
               <Row gutter={8}>
@@ -659,6 +677,8 @@ export default function WordMarkerPage() {
           {/* 字段列表 */}
           <Card
             size="small"
+            bordered={false}
+            style={{ borderRadius: 12, boxShadow: '0 2px 12px rgba(0,0,0,0.08)' }}
             title={
               <Space>
                 <span>已标记字段 ({fields.length})</span>
@@ -668,6 +688,7 @@ export default function WordMarkerPage() {
               fields.length > 0 && (
                 <Button
                   size="small"
+                  danger
                   icon={<ClearOutlined />}
                   onClick={handleClearAll}
                 >
@@ -723,17 +744,30 @@ export default function WordMarkerPage() {
       </Row>
 
       {/* 使用说明 */}
-      <Card size="small" style={{ marginTop: 24 }}>
+      <Card
+        size="small"
+        bordered={false}
+        style={{ marginTop: 24, borderRadius: 12, boxShadow: '0 2px 12px rgba(0,0,0,0.08)', background: '#fafafa' }}
+      >
         <Title level={5}>使用步骤</Title>
         <Row gutter={16}>
           <Col span={8}>
-            <Text type="secondary">1. 上传Word文档</Text>
+            <Space>
+              <Tag color="blue">1</Tag>
+              <Text>上传Word文档</Text>
+            </Space>
           </Col>
           <Col span={8}>
-            <Text type="secondary">2. 选择模式：替换文本 或 插入单元格</Text>
+            <Space>
+              <Tag color="blue">2</Tag>
+              <Text>选择模式：替换文本 或 插入单元格</Text>
+            </Space>
           </Col>
           <Col span={8}>
-            <Text type="secondary">3. 选中文本/点击单元格，输入字段名添加</Text>
+            <Space>
+              <Tag color="blue">3</Tag>
+              <Text>选中文本/点击单元格，输入字段名添加</Text>
+            </Space>
           </Col>
         </Row>
       </Card>

@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge">
+    <title>模板字段标记工具</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            padding: 16px;
+            background: #f5f5f5;
+        }
+        .header {
+            background: #1890ff;
+            color: white;
+            padding: 12px 16px;
+            margin: -16px -16px 16px -16px;
+            border-radius: 4px 4px 0 0;
+        }
+        .header h1 {
+            font-size: 16px;
+            font-weight: 600;
+        }
+        .header p {
+            font-size: 12px;
+            opacity: 0.9;
+            margin-top: 4px;
+        }
+        .section {
+            background: white;
+            border-radius: 4px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .section-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #eee;
+        }
+        .field-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .field-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 12px;
+            background: #f9f9f9;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            border-left: 3px solid #1890ff;
+        }
+        .field-item:hover {
+            background: #e6f7ff;
+        }
+        .field-info {
+            flex: 1;
+        }
+        .field-name {
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+        }
+        .field-preview {
+            font-size: 12px;
+            color: #999;
+            margin-top: 4px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 180px;
+        }
+        .field-actions {
+            display: flex;
+            gap: 8px;
+        }
+        .btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: #1890ff;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #40a9ff;
+        }
+        .btn-danger {
+            background: #ff4d4f;
+            color: white;
+        }
+        .btn-danger:hover {
+            background: #ff7875;
+        }
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #666;
+        }
+        .btn-secondary:hover {
+            background: #d9d9d9;
+        }
+        .btn-block {
+            width: 100%;
+            margin-top: 8px;
+        }
+        .input-group {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .input-field {
+            flex: 1;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .input-field:focus {
+            outline: none;
+            border-color: #1890ff;
+            box-shadow: 0 0 0 2px rgba(24,144,255,0.2);
+        }
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+        }
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+        .empty-state-text {
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px;
+            background: #f0f7ff;
+            border-radius: 4px;
+            margin-bottom: 12px;
+        }
+        .stat-item {
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 20px;
+            font-weight: 600;
+            color: #1890ff;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            margin-top: 4px;
+        }
+        .action-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 4px;
+            font-size: 14px;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .toast.show {
+            opacity: 1;
+        }
+        .help-text {
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 12px;
+            line-height: 1.5;
+        }
+        .tag {
+            display: inline-block;
+            padding: 2px 8px;
+            background: #e6f7ff;
+            color: #1890ff;
+            border-radius: 2px;
+            font-size: 11px;
+            margin-right: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📝 模板字段标记工具</h1>
+        <p>选择Word中的文本，标记为可填充字段</p>
+    </div>
+
+    <div class="section">
+        <div class="section-title">当前选中内容</div>
+        <div class="help-text">
+            👆 在Word文档中选中需要填充的文本，然后点击下方按钮标记为字段
+        </div>
+        <div id="selectedContent" class="input-field" style="background: #f5f5f5; min-height: 40px;">
+            请先在Word中选择文本
+        </div>
+        <div class="input-group" style="margin-top: 12px;">
+            <input type="text" id="fieldName" class="input-field" placeholder="输入字段名称，如：姓名、日期、金额">
+            <button class="btn btn-primary" id="addFieldBtn">添加字段</button>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">已标记的字段</div>
+        <div class="stats">
+            <div class="stat-item">
+                <div class="stat-value" id="fieldCount">0</div>
+                <div class="stat-label">字段数量</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="replaceCount">0</div>
+                <div class="stat-label">替换次数</div>
+            </div>
+        </div>
+        <div class="field-list" id="fieldList">
+            <div class="empty-state">
+                <div class="empty-state-icon">📋</div>
+                <div class="empty-state-text">
+                    还没有标记任何字段<br>
+                    选中Word文本后添加字段
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="action-buttons">
+            <button class="btn btn-primary btn-block" id="generateExcelBtn">
+                📥 生成Excel模板
+            </button>
+            <button class="btn btn-secondary btn-block" id="clearAllBtn">
+                🗑️ 清空所有字段
+            </button>
+            <button class="btn btn-secondary btn-block" id="exportDataBtn">
+                💾 导出字段配置
+            </button>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+    <script>
+        // 字段数据
+        let fields = [];
+        let selectedText = '';
+
+        // Office.js initialization
+        Office.onReady(function(info) {
+            if (info.host === Office.HostType.Word) {
+                console.log('Word Add-in initialized');
+                setupSelectionHandler();
+            }
+        });
+
+        // 监听Word选中内容变化
+        function setupSelectionHandler() {
+            Word.run(function(context) {
+                var range = context.document.getSelection();
+                range.load('text');
+                return context.sync().then(function() {
+                    selectedText = range.text.trim();
+                    updateSelectedDisplay();
+                });
+            });
+        }
+
+        // 更新选中内容显示
+        function updateSelectedDisplay() {
+            var display = document.getElementById('selectedContent');
+            if (selectedText) {
+                display.textContent = '"' + selectedText + '"';
+                display.style.background = '#e6f7ff';
+                display.style.borderColor = '#1890ff';
+            } else {
+                display.textContent = '请先在Word中选择文本';
+                display.style.background = '#f5f5f5';
+                display.style.borderColor = '#ddd';
+            }
+        }
+
+        // 刷新选中内容
+        function refreshSelection() {
+            Word.run(function(context) {
+                var range = context.document.getSelection();
+                range.load('text');
+                return context.sync().then(function() {
+                    selectedText = range.text.trim();
+                    updateSelectedDisplay();
+                });
+            });
+        }
+
+        // 添加字段
+        document.getElementById('addFieldBtn').addEventListener('click', function() {
+            var fieldName = document.getElementById('fieldName').value.trim();
+
+            if (!selectedText) {
+                showToast('请先在Word中选择要标记的文本');
+                return;
+            }
+
+            if (!fieldName) {
+                showToast('请输入字段名称');
+                return;
+            }
+
+            // 检查字段名是否重复
+            if (fields.some(f => f.name === fieldName)) {
+                showToast('字段名称已存在');
+                return;
+            }
+
+            // 添加字段
+            fields.push({
+                name: fieldName,
+                originalText: selectedText,
+                id: Date.now()
+            });
+
+            // 保存到文档
+            saveFieldsToDocument();
+
+            // 更新UI
+            renderFieldList();
+            document.getElementById('fieldName').value = '';
+            selectedText = '';
+            updateSelectedDisplay();
+
+            showToast('字段已添加：' + fieldName);
+        });
+
+        // 渲染字段列表
+        function renderFieldList() {
+            var list = document.getElementById('fieldList');
+            document.getElementById('fieldCount').textContent = fields.length;
+            document.getElementById('replaceCount').textContent = fields.length;
+
+            if (fields.length === 0) {
+                list.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📋</div><div class="empty-state-text">还没有标记任何字段<br>选中Word文本后添加字段</div></div>';
+                return;
+            }
+
+            list.innerHTML = fields.map(function(field) {
+                return '<div class="field-item">' +
+                    '<div class="field-info">' +
+                        '<div class="field-name"><span class="tag">' + field.name + '</span></div>' +
+                        '<div class="field-preview">原文：' + field.originalText + '</div>' +
+                    '</div>' +
+                    '<div class="field-actions">' +
+                        '<button class="btn btn-danger" onclick="removeField(' + field.id + ')">删除</button>' +
+                    '</div>' +
+                '</div>';
+            }).join('');
+        }
+
+        // 删除字段
+        function removeField(id) {
+            fields = fields.filter(function(f) { return f.id !== id; });
+            saveFieldsToDocument();
+            renderFieldList();
+            showToast('字段已删除');
+        }
+
+        // 保存字段到文档
+        function saveFieldsToDocument() {
+            Word.run(function(context) {
+                var properties = context.document.properties;
+
+                // 将字段数据存储为JSON
+                var fieldData = JSON.stringify(fields);
+
+                // 使用自定义XML part存储
+                var customXmlParts = context.document.customXmlParts;
+
+                // 清除旧的标记
+                customXmlParts.items.forEach(function(part) {
+                    part.delete();
+                });
+
+                // 添加新的标记数据
+                customXmlParts.add('<root xmlns="http://tempuri.org/fields"><fields>' +
+                    fields.map(function(f) {
+                        return '<field><name>' + escapeXml(f.name) + '</name><text>' + escapeXml(f.originalText) + '</text></field>';
+                    }).join('') +
+                    '</fields></root>');
+
+                return context.sync();
+            });
+        }
+
+        // XML转义
+        function escapeXml(str) {
+            return str.replace(/&/g, '&amp;')
+                      .replace(/</g, '&lt;')
+                      .replace(/>/g, '&gt;')
+                      .replace(/"/g, '&quot;');
+        }
+
+        // 生成Excel模板
+        document.getElementById('generateExcelBtn').addEventListener('click', function() {
+            if (fields.length === 0) {
+                showToast('请先添加字段');
+                return;
+            }
+
+            // 创建CSV格式的模板（可用Excel打开）
+            var csvContent = '﻿'; // BOM for UTF-8
+            csvContent += fields.map(function(f) { return f.name; }).join(',') + '\n';
+            csvContent += fields.map(function(f) { return f.originalText; }).join(',') + '\n';
+
+            // 下载文件
+            var blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = '模板字段_' + new Date().toLocaleDateString().replace(/\//g, '-') + '.csv';
+            a.click();
+            URL.revokeObjectURL(url);
+
+            showToast('Excel模板已生成！');
+        });
+
+        // 清空所有字段
+        document.getElementById('clearAllBtn').addEventListener('click', function() {
+            if (fields.length === 0) {
+                showToast('没有字段需要清空');
+                return;
+            }
+
+            if (confirm('确定要清空所有已标记的字段吗？')) {
+                fields = [];
+                saveFieldsToDocument();
+                renderFieldList();
+                showToast('已清空所有字段');
+            }
+        });
+
+        // 导出字段配置
+        document.getElementById('exportDataBtn').addEventListener('click', function() {
+            if (fields.length === 0) {
+                showToast('请先添加字段');
+                return;
+            }
+
+            var data = JSON.stringify(fields, null, 2);
+            var blob = new Blob([data], { type: 'application/json' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = '字段配置_' + new Date().toLocaleDateString().replace(/\//g, '-') + '.json';
+            a.click();
+            URL.revokeObjectURL(url);
+
+            showToast('配置已导出！');
+        });
+
+        // 显示提示
+        function showToast(message) {
+            var toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(function() {
+                toast.classList.remove('show');
+            }, 2000);
+        }
+
+        // 加载文档中的已有字段
+        Office.onReady(function(info) {
+            if (info.host === Office.HostType.Word) {
+                loadFieldsFromDocument();
+            }
+        });
+
+        function loadFieldsFromDocument() {
+            Word.run(function(context) {
+                var customXmlParts = context.document.customXmlParts;
+                customXmlParts.load('items');
+
+                return context.sync().then(function() {
+                    customXmlParts.items.forEach(function(part) {
+                        var xml = part.getXml();
+                        // 解析并加载字段...
+                    });
+                });
+            });
+        }
+
+        // 定期刷新选中内容
+        setInterval(refreshSelection, 1000);
+    </script>
+</body>
+</html>
