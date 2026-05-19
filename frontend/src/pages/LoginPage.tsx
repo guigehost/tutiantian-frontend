@@ -38,7 +38,7 @@ export default function LoginPage() {
         color: '#fff',
         textAlign: 'center'
       }}>
-        <img src="/assets/logo.png" alt="兔填填" style={{ width: 60, height: 60, borderRadius: 12, boxShadow: '0 4px 20px rgba(0,0,0,0.2)' }} />
+        <img src="/apps/tutiantian/assets/logo.png" alt="兔填填" style={{ width: 60, height: 60, borderRadius: 12, boxShadow: '0 4px 20px rgba(0,0,0,0.2)' }} />
       </div>
 
       <Card
@@ -126,7 +126,7 @@ export default function LoginPage() {
         <div style={{ textAlign: 'center', marginTop: 16 }}>
           <Text type="secondary" style={{ fontSize: 14 }}>还没有账号？</Text>
           <a
-            href="/register"
+            href="/apps/tutiantian/register"
             style={{
               color: '#667eea',
               fontWeight: 600,
@@ -140,7 +140,7 @@ export default function LoginPage() {
 
         <div style={{ textAlign: 'center', marginTop: 24 }}>
           <a
-            href="/help"
+            href="/apps/tutiantian/help"
             style={{ color: '#94a3b8', fontSize: 13 }}
           >
             遇到问题？查看使用帮助

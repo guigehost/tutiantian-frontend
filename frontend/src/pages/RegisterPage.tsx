@@ -58,7 +58,7 @@ export default function RegisterPage() {
     }}>
       <Card style={{ width: 450, borderRadius: 16, boxShadow: '0 10px 40px rgba(0,0,0,0.2)' }}>
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
-          <img src="/assets/logo.png" alt="兔填填" style={{ width: 80, height: 80 }} />
+          <img src="/apps/tutiantian/assets/logo.png" alt="兔填填" style={{ width: 80, height: 80 }} />
         </div>
         <Title level={3} style={{ textAlign: 'center', marginTop: 0 }}>
           兔填填 - 用户注册
@@ -196,7 +196,7 @@ export default function RegisterPage() {
         )}
 
         <div style={{ textAlign: 'center', marginTop: 16 }}>
-          已有账号？<a href="/login">立即登录</a>
+          已有账号？<a href="/apps/tutiantian/login">立即登录</a>
         </div>
       </Card>
     </div>
