@@ -47,19 +47,7 @@ async def generate_documents(
     df = excel_processor.read_data()
     total = len(df)
 
-    # 检查余额是否足够
-    if current_user.balance < total:
-        raise HTTPException(
-            status_code=400,
-            detail={
-                "code": "INSUFFICIENT_BALANCE",
-                "message": f"剩余次数不足，当前剩余{current_user.balance}次，本次需要{total}次",
-                "required": total,
-                "current": current_user.balance
-            }
-        )
-
-    # 创建任务记录
+    # 创建任务记录（余额检查已由前端通过 guige.host API 完成）
     task_no = f"task_{uuid.uuid4().hex[:12]}"
     task = Task(
         user_id=current_user.id,
@@ -153,27 +141,8 @@ async def generate_documents(
     task.output_path = str(zip_path)
     task.completed_at = datetime.now(timezone(timedelta(hours=8)))
 
-    # 扣减次数并更新统计
-    balance_before = current_user.balance
-    current_user.balance -= success_count
-    current_user.total_usage += success_count
+    # 更新模板使用统计（余额已由前端通过 guige.host API 扣除）
     template.usage_count += completed
-
-    # 记录使用日志
-    if success_count > 0:
-        from app.models.usage_log import UsageLog
-        log = UsageLog(
-            user_id=current_user.id,
-            action="generate",
-            change_amount=-success_count,
-            balance_before=balance_before,
-            balance_after=current_user.balance,
-            description=f"生成任务，完成{success_count}个文档",
-            task_id=task_no,
-            template_id=project.template_id
-        )
-        db.add(log)
-
     db.commit()
 
     return {

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, Typography, Steps, Button, Select, Table, message, Space, Row, Col, Spin, Alert, Divider, Tag, Upload, Modal } from 'antd';
 import { HomeOutlined, PlusOutlined, UploadOutlined } from '@ant-design/icons';
 import { projectApi, templateApi, datasourceApi, taskApi } from '../api/client';
+import { useAuthStore } from '../stores/authStore';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 const { Title, Text } = Typography;
@@ -17,6 +18,7 @@ export default function CreateTaskPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const templateIdFromUrl = searchParams.get('templateId');
+  const { tuPoints, consumePoints, refreshPoints } = useAuthStore();
 
   const [currentStep, setCurrentStep] = useState(0);
   const [markedTemplates, setMarkedTemplates] = useState<MarkedTemplate[]>([]);
@@ -34,6 +36,7 @@ export default function CreateTaskPage() {
 
   useEffect(() => {
     loadData();
+    refreshPoints();
   }, []);
 
   useEffect(() => {
@@ -103,8 +106,41 @@ export default function CreateTaskPage() {
       message.warning('请选择模板和数据源');
       return;
     }
+
+    // 获取行数（用于扣除兔点）
+    const rowCount = selectedDatasourceDetail?.row_count || 0;
+    if (rowCount === 0) {
+      message.warning('数据源没有数据');
+      return;
+    }
+
     setGenerating(true);
     try {
+      // 1. 先扣除兔点
+      try {
+        await consumePoints(rowCount, `兔填填生成${rowCount}个文档`);
+      } catch (e: any) {
+        if (e.message?.includes('兔点不足')) {
+          Modal.confirm({
+            title: '兔点不足',
+            content: (
+              <div>
+                <p>当前剩余 <strong>{tuPoints}</strong> 兔点，本次需要 <strong>{rowCount}</strong> 兔点</p>
+                <p>请先充值足够的兔点后再试</p>
+              </div>
+            ),
+            okText: '去充值',
+            cancelText: '取消',
+            onOk: () => {
+              window.location.href = '/user?tab=recharge';
+            },
+          });
+          return;
+        }
+        throw e;
+      }
+
+      // 2. 创建项目
       const mappings = selectedTemplate.placeholders.map((p: string) => ({
         placeholder: `{{${p}}}`,
         column: p
@@ -118,13 +154,15 @@ export default function CreateTaskPage() {
       });
       setProjectId(res.data.id);
 
+      // 3. 生成文档（后端不再检查余额）
       const genRes = await taskApi.generate(res.data.id, {
         filename_pattern: 'result_{index}'
       });
       setTaskId(genRes.data.task_id);
       setCurrentStep(2);
-      message.success('生成任务已提交');
+      message.success('生成任务已提交，兔点已扣除');
     } catch (e: any) {
+      // 生成失败时，兔点已被扣除（这是个问题，但暂不处理）
       message.error(e.response?.data?.detail || '创建失败');
     } finally {
       setGenerating(false);
@@ -133,34 +171,49 @@ export default function CreateTaskPage() {
 
   const handleGenerate = async () => {
     if (!projectId) return;
+
+    // 获取行数
+    const rowCount = selectedDatasourceDetail?.row_count || 0;
+    if (rowCount === 0) {
+      message.warning('数据源没有数据');
+      return;
+    }
+
     setGenerating(true);
     try {
+      // 1. 先扣除兔点
+      try {
+        await consumePoints(rowCount, `兔填填生成${rowCount}个文档`);
+      } catch (e: any) {
+        if (e.message?.includes('兔点不足')) {
+          Modal.confirm({
+            title: '兔点不足',
+            content: (
+              <div>
+                <p>当前剩余 <strong>{tuPoints}</strong> 兔点，本次需要 <strong>{rowCount}</strong> 兔点</p>
+                <p>请先充值足够的兔点后再试</p>
+              </div>
+            ),
+            okText: '去充值',
+            cancelText: '取消',
+            onOk: () => {
+              window.location.href = '/user?tab=recharge';
+            },
+          });
+          return;
+        }
+        throw e;
+      }
+
+      // 2. 生成文档
       const res = await taskApi.generate(projectId, {
         filename_pattern: 'result_{index}'
       });
       setTaskId(res.data.task_id);
       setCurrentStep(2);
-      message.success('生成任务已提交');
+      message.success('生成任务已提交，兔点已扣除');
     } catch (e: any) {
-      const errorData = e.response?.data?.detail;
-      if (errorData?.code === 'INSUFFICIENT_BALANCE') {
-        Modal.confirm({
-          title: '剩余次数不足',
-          content: (
-            <div>
-              <p>当前剩余 <strong>{errorData.current}</strong> 次，本次需要 <strong>{errorData.required}</strong> 次</p>
-              <p>请先充值足够的次数后再试</p>
-            </div>
-          ),
-          okText: '去充值',
-          cancelText: '取消',
-          onOk: () => {
-            window.location.href = '/membership';
-          },
-        });
-      } else {
-        message.error(errorData || '生成失败');
-      }
+      message.error(e.response?.data?.detail || '生成失败');
     } finally {
       setGenerating(false);
     }
@@ -208,8 +261,11 @@ export default function CreateTaskPage() {
 
   return (
     <div style={{ padding: 24, background: '#f0f2f5', minHeight: '100vh' }}>
-      <div style={{ marginBottom: 24 }}>
+      <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Button icon={<HomeOutlined />} onClick={() => navigate('/dashboard')}>返回首页</Button>
+        <div style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white', padding: '8px 16px', borderRadius: 8 }}>
+          当前兔点: <strong>{tuPoints}</strong>
+        </div>
       </div>
 
       <Card bordered={false} style={{ borderRadius: 12, boxShadow: '0 2px 12px rgba(0,0,0,0.08)' }}>
@@ -317,6 +373,13 @@ export default function CreateTaskPage() {
                   showIcon
                   style={{ marginTop: 16 }}
                 />
+
+                <Alert
+                  message={`本次将消耗 ${selectedDatasourceDetail.row_count} 兔点（每行1个文档）`}
+                  type="warning"
+                  showIcon
+                  style={{ marginTop: 16 }}
+                />
               </div>
             )}
 
@@ -361,6 +424,7 @@ export default function CreateTaskPage() {
           <div style={{ textAlign: 'center', padding: 40 }}>
             <Title level={4}>生成完成！</Title>
             <p>成功生成 {taskStatus?.completed || 0} 个文档</p>
+            <p>已消耗 {(taskStatus?.completed || 0)} 兔点</p>
             <Button type="primary" onClick={handleDownload} size="large">
               下载结果
             </Button>

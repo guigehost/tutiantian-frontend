@@ -15,9 +15,31 @@ import { useAuthStore } from './stores/authStore';
 import { Spin } from 'antd';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { token } = useAuthStore();
+  const { isAuthenticated, isLoading, fetchUser } = useAuthStore();
+  const [checking, setChecking] = useState(true);
 
-  if (!token) {
+  useEffect(() => {
+    const checkAuth = async () => {
+      await fetchUser();
+      setChecking(false);
+    };
+    checkAuth();
+  }, []);
+
+  if (checking || isLoading) {
+    return (
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: '100vh'
+      }}>
+        <Spin size="large" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
     return <Navigate to="/login" />;
   }
 

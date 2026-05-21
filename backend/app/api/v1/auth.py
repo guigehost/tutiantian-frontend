@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Header
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from app.db.database import get_db
@@ -170,15 +170,34 @@ def resend_verification(
 
     return {"message": "验证码已发送", "email": email}
 
-async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
-    try:
-        payload = decode_token(token)
-        user_id = int(payload.get("sub"))
-    except Exception as e:
-        logger.warning(f"Token decode failed: {e}")
-        raise HTTPException(status_code=401, detail="无效的Token")
 
+async def get_current_user(x_user_id: str = Header(None), db: Session = Depends(get_db)):
+    """
+    获取当前用户（通过 X-User-Id header，由前端从 guige.host 获取）
+    简化版：信任前端传递的用户ID
+    """
+    if not x_user_id:
+        raise HTTPException(status_code=401, detail="用户未登录")
+
+    try:
+        user_id = int(x_user_id)
+    except ValueError:
+        raise HTTPException(status_code=401, detail="无效的用户ID")
+
+    # 验证用户存在（从本地数据库查找，以便获取用户的其他信息）
+    # 如果本地没有用户记录，创建一个占位用户
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
-        raise HTTPException(status_code=404, detail="用户不存在")
+        # 创建一个占位用户（实际用户信息从 guige.host 获取）
+        user = User(
+            id=user_id,
+            email=f"user_{user_id}@guige.host",
+            nickname=f"用户_{user_id}",
+            balance=0,  # 不再使用本地余额
+            email_verified=True
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
     return user
