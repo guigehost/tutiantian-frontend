@@ -184,20 +184,21 @@ async def get_current_user(x_user_id: str = Header(None), db: Session = Depends(
     except ValueError:
         raise HTTPException(status_code=401, detail="无效的用户ID")
 
-    # 验证用户存在（从本地数据库查找，以便获取用户的其他信息）
-    # 如果本地没有用户记录，创建一个占位用户
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        # 创建一个占位用户（实际用户信息从 guige.host 获取）
-        user = User(
-            id=user_id,
-            email=f"user_{user_id}@guige.host",
-            nickname=f"用户_{user_id}",
-            balance=0,  # 不再使用本地余额
-            email_verified=True
-        )
-        db.add(user)
-        db.commit()
-        db.refresh(user)
+    # 直接返回用户ID，不查询本地数据库
+    # 创建一个简单的用户对象用于依赖注入
+    class SimpleUser:
+        def __init__(self, user_id):
+            self.id = user_id
+            self.email = f"user_{user_id}@guige.host"
+            self.nickname = f"用户_{user_id}"
+            self.role = "user"
+            self.balance = 0
+            self.purchased_balance = 0
+            self.total_usage = 0
+            self.status = "active"
+            self.is_new_user = True
+            self.registered_at = None
+            self.email_verified = True
+            self.email_code = None
 
-    return user
+    return SimpleUser(user_id)
